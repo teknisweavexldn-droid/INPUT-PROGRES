@@ -1,45 +1,399 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>INPUT PROGRES</title>
-  <link rel="icon" href="" />
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background-color: #eee;
-      overflow: hidden; /* Mencegah scroll ganda */
-    }
-
-    .iframe-container {
-      width: 100%;
-      height: 100dvh; /* Menggunakan dvh agar pas di mobile browser */
-      overflow: hidden;
-    }
-
-    iframe {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; background-color: #f4f7f6; }
+    .header { background-color: #004085; color: white; text-align: center; padding: 15px; }
+    
+    /* Navigasi Tab */
+    .tab-container { display: flex; background-color: #0056b3; }
+    .tab-btn { flex: 1; padding: 12px 0; text-align: center; background: none; color: white; border: none; font-weight: bold; font-size: 14px; cursor: pointer; }
+    .tab-btn.active { background-color: #f4f7f6; color: #0056b3; border-radius: 8px 8px 0 0; }
+    
+    .content-area { padding: 20px; max-width: 650px; margin: 0 auto; }
+    .tab-content { display: none; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    .tab-content.active { display: block; }
+    
+    h3 { margin-top: 0; color: #333; text-align: center; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
+    input[type="text"], input[type="file"], select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    button.submit-btn { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; }
+    button.submit-btn:hover { background-color: #218838; }
+    .btn-lokasi { background-color: #17a2b8; margin-top: 10px; width: 100%; padding: 10px; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    .btn-refresh { background-color: #007bff; margin-bottom: 10px; padding: 8px 12px; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; float: right; }
+    
+    .status { margin-top: 15px; font-weight: bold; text-align: center; }
+    
+    /* Tabel Dashboard */
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+    table, th, td { border: 1px solid #ddd; }
+    th, td { padding: 8px; text-align: left; }
+    th { background-color: #004085; color: white; }
+    .badge-success { background-color: #28a745; color: white; padding: 3px 6px; border-radius: 4px; font-size: 10px; }
+    .dashboard-container { overflow-x: auto; }
+    .file-link { color: #007bff; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div class="iframe-container">
-    <iframe
-      id="app"
-      src="https://script.google.com/macros/s/AKfycbxq2EiSlnR366ynvQjOulKcd8EanMdkhQutscNpEgyEwsuCYXAmx6jSt_2u4yzT_LKcog/exec"
-      scrolling="yes"
-      allowfullscreen="true"
-      webkitallowfullscreen="true"
-      mozallowfullscreen="true"
-      allow="fullscreen; camera; microphone; display-capture; geolocation;">
-    </iframe>
+
+  <div class="header">
+    <h2 style="margin:0;">App Pelaporan FTTH</h2>
   </div>
+
+  <div class="tab-container">
+    <button class="tab-btn active" onclick="openTab('tab-tiang', this)">📍 Tanam Tiang</button>
+    <button class="tab-btn" onclick="openTab('tab-otdr', this)">📈 Cek OTDR</button>
+    <button class="tab-btn" onclick="openTab('tab-dashboard', this)">📊 Dashboard</button>
+  </div>
+
+  <div class="content-area">
+    
+    <!-- TAB 1: FORM TANAM TIANG -->
+    <div id="tab-tiang" class="tab-content active">
+      <h3>Laporan Tanam Tiang</h3>
+      <form onsubmit="submitReport(event, 'Tanam Tiang')">
+        <div class="form-group">
+          <label>Nama Tim / Teknisi:</label>
+          <input type="text" id="nama_tim_tiang" required placeholder="Contoh: Tim Alpha / Budi">
+        </div>
+        <div class="form-group">
+          <label>Kecamatan:</label>
+          <input type="text" id="kecamatan_tiang" required placeholder="Masukkan Kecamatan">
+        </div>
+        <div class="form-group">
+          <label>Desa:</label>
+          <input type="text" id="desa_tiang" required placeholder="Masukkan Desa">
+        </div>
+        <div class="form-group">
+          <label>Titik Koordinat:</label>
+          <input type="text" id="koordinat_tiang" readonly required placeholder="Klik tombol lokasi...">
+          <button type="button" class="btn-lokasi" onclick="getLocation('koordinat_tiang', 'status_tiang')">Dapatkan Lokasi</button>
+        </div>
+        <div class="form-group">
+          <label>Keterangan (Opsional):</label>
+          <input type="text" id="ket_tiang" placeholder="Contoh: Tiang ODP-01 / 7 Meter">
+        </div>
+        <div class="form-group">
+          <label>Foto Tanam Tiang:</label>
+          <input type="file" id="foto_tiang" accept="image/*" capture="environment" required>
+        </div>
+        <button type="submit" id="btn_tiang" class="submit-btn">Kirim Laporan Tiang</button>
+        <div id="status_tiang" class="status"></div>
+      </form>
+    </div>
+
+    <!-- TAB 2: FORM CEK OTDR -->
+    <div id="tab-otdr" class="tab-content">
+      <h3>Laporan Hasil OTDR</h3>
+      <form onsubmit="submitReport(event, 'Cek OTDR')">
+        <div class="form-group">
+          <label>Nama Tim / Teknisi (Opsional):</label>
+          <input type="text" id="nama_tim_otdr" placeholder="Contoh: Tim Splicing A">
+        </div>
+        <div class="form-group">
+          <label>Keterangan Core (Tube / Core):</label>
+          <input type="text" id="ket_otdr" required placeholder="Contoh: Tube 1 / Core 3 (Hijau)">
+        </div>
+        <div class="form-group">
+          <label>Format File OTDR:</label>
+          <select id="format_file_otdr" required>
+            <option value="Foto / Gambar (JPG/PNG)">Foto / Gambar (JPG/PNG)</option>
+            <option value="File PDF (.pdf)">File PDF (.pdf)</option>
+            <option value="File Bellcore/SOR (.sor)">File Bellcore/SOR (.sor)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>File / Foto Hasil OTDR:</label>
+          <input type="file" id="foto_otdr" accept="image/*,.pdf,.sor,.raw" required>
+        </div>
+        <button type="submit" id="btn_otdr" class="submit-btn">Kirim Laporan OTDR</button>
+        <div id="status_otdr" class="status"></div>
+      </form>
+    </div>
+
+    <!-- TAB 3: DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content">
+      <div style="overflow: hidden; margin-bottom: 10px;">
+        <h3 style="float: left; margin: 0;">Riwayat Pelaporan</h3>
+        <button class="btn-refresh" onclick="loadDashboard()">🔄 Refresh Data</button>
+      </div>
+      <p style="font-size: 11px; color: #555; clear: both; text-align: center;">Menampilkan 30 laporan terakhir</p>
+      <div id="loading_dashboard" style="text-align: center; color: #007bff; display: none;">⏳ Memuat data...</div>
+      <div class="dashboard-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Waktu</th>
+              <th>Jenis</th>
+              <th>Tim</th>
+              <th>Kec / Desa</th>
+              <th>Ket / Detail</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody id="tabel_body">
+            <!-- Data dimasukkan via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // =========================================================================
+    // PASTE URL DEPLOYMENT WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
+    // =========================================================================
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzWCJ17siPMABgRlgKcDSib-2psr1YjIn7NtosLpdAxdXmP7gC4LLxrF2zcGry4R1_ZGw/exec";
+
+    // --- NAVIGASI TAB ---
+    function openTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+
+      if(tabId === 'tab-dashboard') {
+        loadDashboard();
+      }
+    }
+
+    // --- FUNGSI GPS ---
+    function getLocation(inputId, statusId) {
+      const statusDiv = document.getElementById(statusId);
+      if (navigator.geolocation) {
+        statusDiv.innerHTML = "⏳ Mencari lokasi...";
+        statusDiv.style.color = "#007bff";
+        
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            document.getElementById(inputId).value = position.coords.latitude + ", " + position.coords.longitude;
+            statusDiv.innerHTML = "✅ Lokasi ditemukan.";
+            statusDiv.style.color = "#28a745";
+          },
+          function(error) {
+            statusDiv.innerHTML = "❌ Gagal mendapatkan lokasi. Pastikan GPS aktif.";
+            statusDiv.style.color = "#d9534f";
+          },
+          { enableHighAccuracy: true }
+        );
+      } else {
+        statusDiv.innerHTML = "❌ Geolocation tidak didukung browser ini.";
+      }
+    }
+
+    // --- BACA FILE & PASANG WATERMARK ---
+    function processImageWithWatermark(file, watermarkTexts) {
+      return new Promise((resolve, reject) => {
+        if (!file) resolve(null);
+
+        if (!file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+          reader.readAsDataURL(file);
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const fontSize = Math.max(16, canvas.width * 0.03);
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            ctx.fillStyle = "white";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            ctx.textBaseline = "bottom";
+
+            const paddingX = 15;
+            let currentY = canvas.height - 15;
+
+            for (let i = watermarkTexts.length - 1; i >= 0; i--) {
+              ctx.strokeText(watermarkTexts[i], paddingX, currentY);
+              ctx.fillText(watermarkTexts[i], paddingX, currentY);
+              currentY -= (fontSize + 8);
+            }
+
+            resolve(canvas.toDataURL(file.type));
+          };
+          img.onerror = () => reject("Gagal memuat gambar");
+          img.src = e.target.result;
+        };
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // --- HELPER DUAL MODE (MENDUKUNG GITHUB PAGES & GOOGLE APPS SCRIPT DIRECT) ---
+    async function apiGetDashboard() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(data => resolve(data))
+            .withFailureHandler(err => reject(err))
+            .getDashboardData();
+        });
+      } else {
+        const response = await fetch(WEB_APP_URL + '?action=getDashboardData');
+        const resData = await response.json();
+        if (resData.status === "success") {
+          return resData.data;
+        } else {
+          throw new Error(resData.message || "Gagal mengambil data dashboard");
+        }
+      }
+    }
+
+    async function apiSubmitForm(data) {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(res => resolve(res))
+            .withFailureHandler(err => reject(err))
+            .processForm(data);
+        });
+      } else {
+        const response = await fetch(WEB_APP_URL, {
+          method: "POST",
+          body: JSON.stringify(data)
+        });
+        const resData = await response.json();
+        if (resData.status === "success") {
+          return resData.message;
+        } else {
+          throw new Error(resData.message || "Gagal mengirim laporan");
+        }
+      }
+    }
+
+    // --- SUBMIT FORM ---
+    async function submitReport(event, jenisLaporan) {
+      event.preventDefault();
+      
+      let prefix = jenisLaporan === 'Tanam Tiang' ? 'tiang' : 'otdr';
+      
+      const submitBtn = document.getElementById('btn_' + prefix);
+      const statusDiv = document.getElementById('status_' + prefix);
+      
+      const namaTim = document.getElementById('nama_tim_' + prefix) ? document.getElementById('nama_tim_' + prefix).value : "-";
+      const koordinatVal = document.getElementById('koordinat_' + prefix) ? document.getElementById('koordinat_' + prefix).value : "-";
+      const ketVal = document.getElementById('ket_' + prefix).value || "-";
+      const formatFileVal = document.getElementById('format_file_' + prefix) ? document.getElementById('format_file_' + prefix).value : "Foto/Gambar";
+      const fileInput = document.getElementById('foto_' + prefix).files[0];
+
+      const kecamatanVal = document.getElementById('kecamatan_' + prefix) ? document.getElementById('kecamatan_' + prefix).value : "-";
+      const desaVal = document.getElementById('desa_' + prefix) ? document.getElementById('desa_' + prefix).value : "-";
+
+      if (jenisLaporan === 'Tanam Tiang' && !koordinatVal) {
+        alert("Harap dapatkan lokasi koordinat terlebih dahulu!");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = "Mengirim...";
+      statusDiv.innerHTML = "⏳ Menambahkan watermark & mengunggah...";
+      statusDiv.style.color = "#007bff";
+
+      try {
+        let watermarkTexts = [];
+        const timeNow = new Date().toLocaleString('id-ID');
+        
+        if(jenisLaporan === 'Tanam Tiang') {
+          watermarkTexts.push(`Waktu: ${timeNow}`);
+          watermarkTexts.push(`Kecamatan: ${kecamatanVal}, Desa: ${desaVal}`);
+          watermarkTexts.push(`Koordinat: ${koordinatVal}`);
+        } else {
+          watermarkTexts.push(`Waktu: ${timeNow}`);
+        }
+
+        const base64File = await processImageWithWatermark(fileInput, watermarkTexts);
+
+        const data = {
+          jenis: jenisLaporan,
+          nama_tim: namaTim,
+          kecamatan: kecamatanVal,
+          desa: desaVal,
+          koordinat: koordinatVal,
+          keterangan: ketVal,
+          format_file: formatFileVal,
+          foto: base64File
+        };
+
+        const responseMsg = await apiSubmitForm(data);
+
+        statusDiv.innerHTML = responseMsg;
+        if(responseMsg.includes("berhasil")) {
+          statusDiv.style.color = "#28a745";
+          event.target.reset();
+        } else {
+          statusDiv.style.color = "#d9534f";
+        }
+      } catch (error) {
+        statusDiv.innerHTML = "❌ Error: " + (error.message || error);
+        statusDiv.style.color = "#d9534f";
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = "Kirim Laporan " + (jenisLaporan === 'Tanam Tiang' ? 'Tiang' : 'OTDR');
+      }
+    }
+
+    // --- MUAT DASHBOARD ---
+    async function loadDashboard() {
+      const loading = document.getElementById('loading_dashboard');
+      const tbody = document.getElementById('tabel_body');
+      
+      loading.style.display = 'block';
+      tbody.innerHTML = '';
+
+      try {
+        const data = await apiGetDashboard();
+        loading.style.display = 'none';
+        
+        if(!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Belum ada laporan</td></tr>';
+          return;
+        }
+
+        let html = '';
+        data.forEach(row => {
+          let waktu = row[0] ? row[0].split(" ")[0] : "-"; 
+          let jenis = row[1] === "Tanam Tiang" ? "📍 Tiang" : "📈 OTDR";
+          let lokasi = (row[3] !== "-" || row[4] !== "-") ? `${row[3] || '-'}/${row[4] || '-'}` : "-";
+          let detail = row[1] === "Tanam Tiang" ? row[6] : `${row[6]} (${row[7]})`;
+          let fileLink = row[8] && row[8].startsWith("http") 
+            ? `<a href="${row[8]}" target="_blank" class="file-link">📁 Buka</a>` 
+            : `<span class="badge-success">✓ OK</span>`;
+          
+          html += `
+            <tr>
+              <td>${waktu}</td>
+              <td><strong>${jenis}</strong></td>
+              <td>${row[2]}</td>
+              <td>${lokasi}</td>
+              <td>${detail}</td>
+              <td>${fileLink}</td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+
+      } catch (error) {
+        loading.style.display = 'none';
+        tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Gagal memuat data: ${error.message}</td></tr>`;
+      }
+    }
+  </script>
 </body>
 </html>
